@@ -2,6 +2,11 @@
 name = "cargo-reduce-workspace-recipe"
 version = "0.1.0"
 edition = "2024"
+repository = "https://github.com/preiter93/reduce-workspace-recipe"
+readme = "README.md"
+license = "MIT"
+keywords = ["cargo-chef", "chef", "workspace", "recipe"]
+description = "Reduce a cargo chef workspace recipe by removing unused workspace members."
 
 [[bin]]
 name = "cargo-reduce-workspace-recipe"

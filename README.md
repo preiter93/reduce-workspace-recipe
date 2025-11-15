@@ -19,5 +19,5 @@ This crate filters a recipe **after a `cargo chef prepare` step**:
 ## Usage
 
 ```sh
-cargo reduce-workspace-recipe --recipe-path-in recipe.json --recipe-path-out recipe-reduced.json
+cargo-reduce-workspace-recipe --recipe-path-in recipe.json --recipe-path-out recipe-reduced.json
 ```
