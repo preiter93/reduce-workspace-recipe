@@ -140,7 +140,7 @@ pub fn reduce_recipe(recipe: &Recipe) -> Result<Recipe> {
 
     let all_members = get_all_workspace_members(recipe);
 
-    let dependencies = build_workspace_deps(recipe, &all_members);
+    let dependencies = build_workspace_dependencies(recipe, &all_members);
 
     let keep_members = compute_transitive_members(&root_members, &dependencies);
 
@@ -186,7 +186,7 @@ fn get_all_workspace_members(recipe: &Recipe) -> HashSet<String> {
 }
 
 /// Build workspace dependency map
-fn build_workspace_deps(
+fn build_workspace_dependencies(
     recipe: &Recipe,
     all_members: &HashSet<String>,
 ) -> HashMap<String, HashSet<String>> {
