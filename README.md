@@ -4,9 +4,7 @@
 
 ## Problem
 
-When using `cargo-chef` on a workspace with multiple members if **one member’s dependencies change all other members get rebuild** irrespective of whether they depend on that member. This is because the recipe, even though it got filtered with `--bin foo`, still contains all workspace members and their dependencies in the manifest and the lockfile. **This causes unnecessary rebuilds of unrelated members**.
-
-See: [cargo-chef issue #314](https://github.com/LukeMathWalker/cargo-chef/issues/314)
+When using [cargo-chef](https://github.com/LukeMathWalker/cargo-chef) on a workspace with multiple members if **one member’s dependencies change all other members get rebuild** irrespective of whether they depend on that member. This is because the recipe, even though it got filtered with `--bin foo`, still contains all workspace members and their dependencies in the manifest and the lockfile. **This causes unnecessary rebuilds of unrelated members**.
 
 ## Solution
 
