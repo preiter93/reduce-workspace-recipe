@@ -6,7 +6,8 @@
 
 </div>
 
-`cargo-reduce-workspace-recipe` post-processes `cargo-chef` recipes for workspaces with multiple interdependent members.
+`cargo-reduce-workspace-recipe` reduces `cargo-chef` recipes for multi-member workspaces by removing dependencies that are unrelated to the targeted member.  
+This results in improved Docker caching.
 
 ## Problem
 
