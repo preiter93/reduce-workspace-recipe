@@ -21,6 +21,8 @@
 //!
 //! `cargo-reduce-recipe` fixes that. It post-processes the generated recipe and removes all dependency and lockfile entries that are not actually required by the selected workspace member (directly or transitively). The result is a minimized recipe ensuring that unrelated workspace changes no longer trigger unnecessary rebuilds.
 //!
+//! In a real-life unpublished workspace, using cargo-reduce-recipe cut Docker build times for unrelated members for me from 82s to 23s, a ~72% reduction.
+//!
 //! # Installation
 //!
 //! ```sh

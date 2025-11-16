@@ -29,6 +29,8 @@ As a result a change in `foo`’s dependencies invalidates the Docker cache for 
 
 `cargo-reduce-recipe` fixes that. It post-processes the generated recipe and removes all dependency and lockfile entries that are not actually required by the selected workspace member (directly or transitively). The result is a minimized recipe ensuring that unrelated workspace changes no longer trigger unnecessary rebuilds.
 
+In a real-life unpublished workspace, using cargo-reduce-recipe cut Docker build times for unrelated members for me from 80s to 20s, a ~75% reduction.
+
 ## Installation
 
 ```sh
@@ -71,22 +73,20 @@ WORKDIR /services
 RUN cargo install cargo-chef --locked --version 0.1.73 \
     && cargo install --git https://github.com/preiter93/cargo-reduce-recipe --tag v0.1.0
 
-# Prepare the workspace recipe 
+# Prepare and reduce the recipe 
 FROM chef as planner
 ARG SERVICE_NAME
 ENV SERVICE_NAME=${SERVICE_NAME}
 COPY . .
-RUN cargo chef prepare --bin ${SERVICE_NAME} --recipe-path recipe.json
-
-# Reduce the workspace recipe
-RUN cargo-reduce-recipe --recipe-path-in recipe.json --recipe-path-out recipe-reduced.json
+RUN cargo chef prepare --bin ${SERVICE_NAME} --recipe-path recipe.json \
+    && cargo-reduce-recipe --recipe-path-in recipe.json --recipe-path-out recipe-reduced.json
 
 # Build the dependencies
 FROM chef as builder
 ARG SERVICE_NAME
 ENV SERVICE_NAME=${SERVICE_NAME}
-COPY --from=planner /services/recipe-reduced.json recipe-reduced.json
-RUN cargo chef cook --release --recipe-path recipe-reduced.json --bin ${SERVICE_NAME}
+COPY --from=planner /services/recipe-reduced.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json --bin ${SERVICE_NAME}
 
 # Build the binary
 COPY . .
