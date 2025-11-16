@@ -10,7 +10,7 @@ use std::path::PathBuf;
 #[derive(Parser)]
 #[command(
     version = "0.1.0",
-    about = "Reduces a Cargo Chef workspace recipe by filtering unused workspace members"
+    about = "Reduces a cargo-chef workspace recipe by filtering unused workspace members and dependencies"
 )]
 struct Args {
     /// Path to the original recipe.json
@@ -18,7 +18,7 @@ struct Args {
         long = "recipe-path-in",
         default_value = "recipe.json",
         value_name = "INPUT",
-        help = "Path to the Cargo Chef recipe.json to reduce"
+        help = "Path to the original cargo-chef recipe.json"
     )]
     recipe_in: PathBuf,
 
@@ -37,7 +37,7 @@ struct Args {
         long = "bin",
         value_name = "NAME",
         required = true,
-        help = "The workspace binary to keep (all its dependent members will be kept)"
+        help = "The workspace binary to reduce to"
     )]
     bin: String,
 }
