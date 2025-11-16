@@ -164,6 +164,13 @@ fn build_workspace_deps(
                     }
                 }
             }
+            if let Some(table) = doc.get("dev-dependencies").and_then(|v| v.as_table()) {
+                for (dep_name, _) in table {
+                    if all_members.contains(dep_name) {
+                        deps.insert(dep_name.to_string());
+                    }
+                }
+            }
             map.insert(name, deps);
         }
     }
