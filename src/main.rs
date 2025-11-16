@@ -5,9 +5,8 @@ use std::path::PathBuf;
 
 /// Reduce a cargo chef workspace recipe by removing unused workspace members.
 ///
-/// This command takes a `recipe.json` produced by `cargo chef prepare`
-/// and outputs a reduced recipe containing only the workspace members
-/// that are needed.
+/// This command takes a `recipe.json` produced by `cargo chef prepare --bin foo`
+/// and outputs a reduced recipe containing only the workspace members that are needed.
 #[derive(Parser)]
 #[command(
     version = "0.1.0",
