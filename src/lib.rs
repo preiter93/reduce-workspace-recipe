@@ -12,7 +12,7 @@
 //!
 //! However, when using [cargo-chef](https://github.com/LukeMathWalker/cargo-chef), adding a new dependency to `foo` will still force `bar` to be rebuilt even if you run:
 //! ```sh
-//! cargo chef prepare --bin bar --recipe-path recipe-bar.json
+//! cargo chef prepare --recipe-path recipe-bar.json --bin bar
 //! ```
 //!
 //! The issue is that cargo-chef’s generated recipe still includes all workspace members manifests and lockfiles even those that are unrelated to the filtered member.
@@ -35,14 +35,15 @@
 //!
 //! 1. Prepare a recipe for a single member
 //! ```sh
-//! cargo chef prepare --bin bar --recipe-path recipe-bar.json
+//! cargo chef prepare --recipe-path recipe-bar.json --bin bar
 //! ```
 //!
 //! 2. Reduce the recipe
 //! ```sh
 //! cargo-reduce-recipe \
 //!     --recipe-path-in recipe-bar.json \
-//!     --recipe-path-out recipe-bar-reduced.json
+//!     --recipe-path-out recipe-bar-reduced.json \
+//!     --bin bar
 //! ```
 //!
 //! 3. Cook the reduced recipe
@@ -68,10 +69,8 @@
 //! ARG SERVICE_NAME
 //! ENV SERVICE_NAME=${SERVICE_NAME}
 //! COPY . .
-//! RUN cargo chef prepare --bin ${SERVICE_NAME} --recipe-path recipe.json
-//!
-//! # Reduce the workspace recipe
-//! RUN cargo-reduce-recipe --recipe-path-in recipe.json --recipe-path-out recipe-reduced.json
+//! RUN cargo chef prepare --recipe-path recipe.json --bin ${SERVICE_NAME} \
+//!     && cargo-reduce-recipe --recipe-path-in recipe.json --recipe-path-out recipe-reduced.json --bin ${SERVICE_NAME}
 //!
 //! # Build the dependencies
 //! FROM chef as builder
@@ -97,7 +96,7 @@ use std::{
     fs,
     path::Path,
 };
-use toml_edit::{Document, Item};
+use toml_edit::{Array, Document, Item};
 
 /// Loads a recipe, reduces it with [`reduce_recipe`] and
 /// saves the reduces recipe to a file.
@@ -151,6 +150,8 @@ pub fn reduce_recipe(recipe: &Recipe, target_member: &str) -> Result<Recipe> {
     let keep_ws_deps = compute_transitive_deps(target_member, &ws_deps_graph);
 
     let mut reduced = recipe.clone();
+    filter_root_members(&mut reduced, target_member)?;
+
     filter_manifests(&mut reduced, &keep_members);
 
     filter_lockfile(&mut reduced, &all_members, &keep_members)?;
@@ -160,7 +161,7 @@ pub fn reduce_recipe(recipe: &Recipe, target_member: &str) -> Result<Recipe> {
     Ok(reduced)
 }
 
-/// Find root Cargo.toml
+/// Find root manifest
 fn get_root_manifest(recipe: &Recipe) -> Result<&Manifest> {
     recipe
         .skeleton
@@ -251,8 +252,31 @@ fn compute_transitive_deps(
 
     keep
 }
+/// Filters the root manifest workspace members to keep ony the target member
+fn filter_root_members(recipe: &mut Recipe, target: &str) -> Result<()> {
+    let root = recipe
+        .skeleton
+        .manifests
+        .iter_mut()
+        .find(|m| m.relative_path.to_str() == Some("Cargo.toml"))
+        .context("no root Cargo.toml found")?;
 
-/// Filter manifests to keep only the workspace members we want
+    let doc: Document<String> = root
+        .contents
+        .parse()
+        .context("root Cargo.toml is not valid toml")?;
+    let mut doc = doc.into_mut();
+
+    let mut arr = Array::new();
+    arr.push(target);
+    doc["workspace"]["members"] = arr.into();
+
+    root.contents = doc.to_string();
+
+    Ok(())
+}
+
+/// Filter manifests to keep only the relevant workspace members
 ///
 /// Keep if:
 /// - It's the root Cargo.toml (no package name)
@@ -264,7 +288,7 @@ fn filter_manifests(recipe: &mut Recipe, keep_members: &HashSet<String>) {
         .retain(|m| extract_crate_name(m).is_none_or(|name| keep_members.contains(&name)));
 }
 
-/// Filter lockfile to keep only dependencies we want
+/// Filter lockfile to keep only relevant dependencies
 fn filter_lockfile(
     recipe: &mut Recipe,
     all_members: &HashSet<String>,
@@ -315,23 +339,6 @@ fn save_recipe<P: AsRef<Path>>(json: &str, path: P) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // #[test]
-    // fn test_keep_full_member_recipe_intact() -> Result<()> {
-    //     let given_path = "test-data/recipes/recipe.json";
-    //     let want_path = "test-data/recipes/recipe.json";
-    //
-    //     let recipe = load_recipe(given_path)?;
-    //     let reduced = reduce_recipe(&recipe)?;
-    //
-    //     let want_reduced = load_recipe(want_path)?;
-    //
-    //     assert_eq!(
-    //         reduced, want_reduced,
-    //         "reduced recipe does not match expected output"
-    //     );
-    //     Ok(())
-    // }
 
     #[test]
     fn test_reduce_recipe_without_member_dependency() -> Result<()> {
