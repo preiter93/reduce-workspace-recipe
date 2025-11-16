@@ -25,6 +25,21 @@ As a result a change in `foo`’s dependencies invalidates the Docker cache for 
 
 ## Usage
 
-```sh
-cargo-reduce-workspace-recipe --recipe-path-in recipe.json --recipe-path-out recipe-reduced.json
+To build dependency recipes for only a specific workspace member, follow this:
+
+1. Prepare a recipe for a single member
+```
+cargo chef prepare --bin bar --recipe-path recipe-bar.json
+```
+
+2. Reduce the recipe
+```
+cargo-reduce-workspace-recipe \
+    --recipe-path-in recipe-bar.json \
+    --recipe-path-out recipe-bar-reduced.json
+```
+
+3. Cook the reduced recipe
+```
+cargo chef cook --release --recipe-path recipe-bar-reduced.json --bin bar
 ```
