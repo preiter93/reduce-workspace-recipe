@@ -22,6 +22,12 @@
 //!
 //! `cargo-reduce-workspce-recipe` fixes that. It post-processes the generated recipe and removes all dependency and lockfile entries that are not actually required by the selected workspace member (directly or transitively). The result is a minimized recipe ensuring that unrelated workspace changes no longer trigger unnecessary rebuilds.
 //!
+//! # Installation
+//!
+//! ```sh
+//! cargo install --git https://github.com/preiter93/reduce-workspace-recipe
+//! ```
+//!
 //! # Usage
 //!
 //! To build dependency recipes for only a specific workspace member, follow this:
