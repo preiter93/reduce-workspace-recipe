@@ -1,20 +1,20 @@
 [package]
-name = "cargo-reduce-workspace-recipe"
+name = "cargo-reduce-recipe"
 version = "0.1.0"
 edition = "2024"
 authors = ["preiter <phil.reiter93@gmail.com>"]
-repository = "https://github.com/preiter93/reduce-workspace-recipe"
+repository = "https://github.com/preiter93/cargo-reduce-recipe"
 readme = "README.md"
 license = "MIT"
 keywords = ["cargo-chef", "chef", "workspace", "recipe"]
 description = "Reduce a cargo chef workspace recipe by removing unused workspace members."
 
 [[bin]]
-name = "cargo-reduce-workspace-recipe"
+name = "cargo-reduce-recipe"
 path = "src/main.rs"
 
 [lib]
-name = "reduce_workspace_recipe"
+name = "reduce_recipe"
 path = "src/lib.rs"
 
 [dependencies]

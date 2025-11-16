@@ -1,4 +1,4 @@
-//! `cargo-reduce-workspace-recipe` reduces `cargo-chef` recipes for multi-member workspaces by removing dependencies that are unrelated to the targeted member. This results in improved Docker caching.
+//! `cargo-reduce-recipe` reduces `cargo-chef` recipes for multi-member workspaces by removing dependencies that are unrelated to the targeted member. This results in improved Docker caching.
 //!
 //! # Problem
 //!
@@ -19,12 +19,12 @@
 //!
 //! As a result a change in `foo`’s dependencies invalidates the Docker cache for `bar`.
 //!
-//! `cargo-reduce-workspce-recipe` fixes that. It post-processes the generated recipe and removes all dependency and lockfile entries that are not actually required by the selected workspace member (directly or transitively). The result is a minimized recipe ensuring that unrelated workspace changes no longer trigger unnecessary rebuilds.
+//! `cargo-reduce-recipe` fixes that. It post-processes the generated recipe and removes all dependency and lockfile entries that are not actually required by the selected workspace member (directly or transitively). The result is a minimized recipe ensuring that unrelated workspace changes no longer trigger unnecessary rebuilds.
 //!
 //! # Installation
 //!
 //! ```sh
-//! cargo install --git https://github.com/preiter93/reduce-workspace-recipe --tag v0.1.0
+//! cargo install --git https://github.com/preiter93/cargo-reduce-recipe --tag v0.1.0
 //! ```
 //!
 //! # Usage
@@ -38,7 +38,7 @@
 //!
 //! 2. Reduce the recipe
 //! ```sh
-//! cargo-reduce-workspace-recipe \
+//! cargo-reduce-recipe \
 //!     --recipe-path-in recipe-bar.json \
 //!     --recipe-path-out recipe-bar-reduced.json
 //! ```
@@ -50,16 +50,16 @@
 //!
 //! # Docker
 //!
-//! `cargo-reduce-workspace-recipe` can be used together with `cargo-chef` in a Dockerfile:
+//! `cargo-reduce-recipe` can be used together with `cargo-chef` in a Dockerfile:
 //! ```Dockerfile
 //! ARG SERVICE_NAME
 //!
 //! FROM rust:1.88-bookworm AS chef
 //! WORKDIR /services
 //!
-//! # Install cargo-chef and cargo-reduce-workspace-recipe
+//! # Install cargo-chef and cargo-reduce-recipe
 //! RUN cargo install cargo-chef --locked --version 0.1.73 \
-//!     && cargo install --git https://github.com/preiter93/reduce-workspace-recipe --tag v0.1.0
+//!     && cargo install --git https://github.com/preiter93/cargo-reduce-recipe --tag v0.1.0
 //!
 //! # Prepare the workspace recipe
 //! FROM chef as planner
@@ -69,7 +69,7 @@
 //! RUN cargo chef prepare --bin ${SERVICE_NAME} --recipe-path recipe.json
 //!
 //! # Reduce the workspace recipe
-//! RUN cargo-reduce-workspace-recipe --recipe-path-in recipe.json --recipe-path-out recipe-reduced.json
+//! RUN cargo-reduce-recipe --recipe-path-in recipe.json --recipe-path-out recipe-reduced.json
 //!
 //! # Build the dependencies
 //! FROM chef as builder
@@ -97,7 +97,7 @@ use std::{
 };
 use toml_edit::{Document, Item};
 
-/// Loads a recipe, reduces it with [`reduce_workspace_recipe`] and
+/// Loads a recipe, reduces it with [`reduce_recipe`] and
 /// saves the reduces recipe to a file.
 ///
 /// # Errors
@@ -109,10 +109,10 @@ use toml_edit::{Document, Item};
 /// - Could not filter manifest
 /// - Could not filter lockfile
 /// - Could not save the file
-pub fn reduce_workspace_recipe_file<P: AsRef<Path>>(input_path: &P, output_path: &P) -> Result<()> {
+pub fn reduce_recipe_file<P: AsRef<Path>>(input_path: &P, output_path: &P) -> Result<()> {
     let recipe = load_recipe(input_path)?;
 
-    let reduced = reduce_workspace_recipe(&recipe)?;
+    let reduced = reduce_recipe(&recipe)?;
 
     let out = serde_json::to_string(&reduced).context("failed to serialize reduced recipe")?;
     save_recipe(&out, output_path)
@@ -131,7 +131,7 @@ pub fn reduce_workspace_recipe_file<P: AsRef<Path>>(input_path: &P, output_path:
 /// - Could not build dependencies
 /// - Could not filter manifest
 /// - Could not filter lockfile
-pub fn reduce_workspace_recipe(recipe: &Recipe) -> Result<Recipe> {
+pub fn reduce_recipe(recipe: &Recipe) -> Result<Recipe> {
     let root_manifest = get_root_manifest(recipe)?;
 
     let root_members = get_root_workspace_members(root_manifest)?;
@@ -307,7 +307,7 @@ mod tests {
         let want_path = "test-data/recipes/recipe.json";
 
         let recipe = load_recipe(given_path)?;
-        let reduced = reduce_workspace_recipe(&recipe)?;
+        let reduced = reduce_recipe(&recipe)?;
 
         let want_reduced = load_recipe(want_path)?;
 
@@ -324,7 +324,7 @@ mod tests {
         let want_path = "test-data/recipes/want-recipe-bar.json";
 
         let recipe = load_recipe(given_path)?;
-        let reduced = reduce_workspace_recipe(&recipe)?;
+        let reduced = reduce_recipe(&recipe)?;
 
         let want_reduced = load_recipe(want_path)?;
 
@@ -341,7 +341,7 @@ mod tests {
         let want_path = "test-data/recipes/want-recipe-baz.json";
 
         let recipe = load_recipe(given_path)?;
-        let reduced = reduce_workspace_recipe(&recipe)?;
+        let reduced = reduce_recipe(&recipe)?;
 
         let want_reduced = load_recipe(want_path)?;
 

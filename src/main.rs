@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-use reduce_workspace_recipe::reduce_workspace_recipe_file;
+use reduce_recipe::reduce_recipe_file;
 use std::path::PathBuf;
 
 /// Reduce a cargo chef workspace recipe by removing unused workspace members.
@@ -35,7 +35,7 @@ struct Args {
 fn main() -> Result<()> {
     let args = Args::parse();
 
-    reduce_workspace_recipe_file(&args.recipe_in, &args.recipe_out)?;
+    reduce_recipe_file(&args.recipe_in, &args.recipe_out)?;
 
     println!(
         "Reduced recipe written from '{}' to '{}'",

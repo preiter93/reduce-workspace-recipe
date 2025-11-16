@@ -140,7 +140,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cargo-reduce-workspace-recipe"
+name = "cargo-reduce-recipe"
 version = "0.1.0"
 dependencies = [
  "anyhow",
