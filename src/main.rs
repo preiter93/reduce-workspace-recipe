@@ -37,11 +37,5 @@ fn main() -> Result<()> {
 
     reduce_recipe_file(&args.recipe_in, &args.recipe_out)?;
 
-    println!(
-        "Reduced recipe written from '{}' to '{}'",
-        args.recipe_in.display(),
-        args.recipe_out.display()
-    );
-
     Ok(())
 }
