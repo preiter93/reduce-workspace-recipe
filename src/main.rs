@@ -31,21 +31,21 @@ struct Args {
     )]
     recipe_out: PathBuf,
 
-    /// The workspace binary to keep.
+    /// The workspace member to keep.
     /// All of its transitive workspace dependencies will be kept.
     #[arg(
-        long = "bin",
+        long = "target-member",
         value_name = "NAME",
         required = true,
-        help = "The workspace binary to reduce to"
+        help = "The workspace member to reduce to"
     )]
-    bin: String,
+    target_member: String,
 }
 
 fn main() -> Result<()> {
     let args = Args::parse();
 
-    reduce_recipe_file(&args.recipe_in, &args.recipe_out, &args.bin)?;
+    reduce_recipe_file(&args.recipe_in, &args.recipe_out, &args.target_member)?;
 
     Ok(())
 }

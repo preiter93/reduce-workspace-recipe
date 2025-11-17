@@ -43,7 +43,7 @@
 //! cargo-reduce-recipe \
 //!     --recipe-path-in recipe-bar.json \
 //!     --recipe-path-out recipe-bar-reduced.json \
-//!     --bin bar
+//!     --target-member bar
 //! ```
 //!
 //! 3. Cook the reduced recipe
@@ -70,7 +70,7 @@
 //! ENV SERVICE_NAME=${SERVICE_NAME}
 //! COPY . .
 //! RUN cargo chef prepare --recipe-path recipe.json --bin ${SERVICE_NAME} \
-//!     && cargo-reduce-recipe --recipe-path-in recipe.json --recipe-path-out recipe-reduced.json --bin ${SERVICE_NAME}
+//!     && cargo-reduce-recipe --recipe-path-in recipe.json --recipe-path-out recipe-reduced.json --target-member ${SERVICE_NAME}
 //!
 //! # Build the dependencies
 //! FROM chef as builder
@@ -131,17 +131,16 @@ pub fn reduce_recipe_file<P: AsRef<Path>>(
 ///
 /// # Errors
 /// - Could not get root manifest
-/// - Could not find root workspace members
-/// - Could not find all workspace members
-/// - Could not build dependencies
+/// - Could not find workspace members or workspace dependencies
+/// - Could not build workspace member/dependencies graph
 /// - Could not filter manifest
 /// - Could not filter lockfile
 pub fn reduce_recipe(recipe: &Recipe, target_member: &str) -> Result<Recipe> {
     let root_manifest = get_root_manifest(recipe)?;
 
-    let all_members = get_all_workspace_members(recipe);
+    let all_members = get_workspace_members(recipe);
 
-    let all_ws_deps = get_all_workspace_deps(root_manifest)?;
+    let all_ws_deps = get_workspace_deps(root_manifest)?;
 
     let (members_graph, ws_deps_graph) = build_dependencies(recipe, &all_members, &all_ws_deps);
 
@@ -161,7 +160,7 @@ pub fn reduce_recipe(recipe: &Recipe, target_member: &str) -> Result<Recipe> {
     Ok(reduced)
 }
 
-/// Find root manifest
+/// Get root manifest
 fn get_root_manifest(recipe: &Recipe) -> Result<&Manifest> {
     recipe
         .skeleton
@@ -171,8 +170,24 @@ fn get_root_manifest(recipe: &Recipe) -> Result<&Manifest> {
         .context("no root Cargo.toml found")
 }
 
+/// Get mutable root manifest
+fn get_root_manifest_mut(recipe: &mut Recipe) -> Result<&mut Manifest> {
+    recipe
+        .skeleton
+        .manifests
+        .iter_mut()
+        .find(|m| m.relative_path.to_str() == Some("Cargo.toml"))
+        .context("no root Cargo.toml found")
+}
+
+// Extract all workspace members
+fn get_workspace_members(recipe: &Recipe) -> HashSet<String> {
+    let manifests = &recipe.skeleton.manifests;
+    manifests.iter().filter_map(extract_crate_name).collect()
+}
+
 /// Extract the root workspace dependencies.
-fn get_all_workspace_deps(root: &Manifest) -> Result<HashSet<String>> {
+fn get_workspace_deps(root: &Manifest) -> Result<HashSet<String>> {
     let doc: Document<String> = root
         .contents
         .parse()
@@ -188,12 +203,6 @@ fn get_all_workspace_deps(root: &Manifest) -> Result<HashSet<String>> {
         .collect())
 }
 
-// Extract all workspace members
-fn get_all_workspace_members(recipe: &Recipe) -> HashSet<String> {
-    let manifests = &recipe.skeleton.manifests;
-    manifests.iter().filter_map(extract_crate_name).collect()
-}
-
 /// Build workspace dependency map
 fn build_dependencies(
     recipe: &Recipe,
@@ -203,13 +212,13 @@ fn build_dependencies(
     HashMap<String, HashSet<String>>,
     HashMap<String, HashSet<String>>,
 ) {
-    let mut members = HashMap::new();
-    let mut dependencies = HashMap::new();
+    let mut members_graph = HashMap::new();
+    let mut ws_deps_graph = HashMap::new();
 
     for manifest in &recipe.skeleton.manifests {
         if let Some(name) = extract_crate_name(manifest) {
-            let mut ws_members = HashSet::new();
-            let mut ws_dependencies = HashSet::new();
+            let mut members = HashSet::new();
+            let mut ws_deps = HashSet::new();
             let doc: Document<String> = match manifest.contents.parse() {
                 Ok(d) => d,
                 Err(_) => continue,
@@ -218,20 +227,20 @@ fn build_dependencies(
                 if let Some(table) = doc.get(key).and_then(|v| v.as_table()) {
                     for (dep_name, _) in table {
                         if all_ws_members.contains(dep_name) {
-                            ws_members.insert(dep_name.to_string());
+                            members.insert(dep_name.to_string());
                         }
                         if all_ws_dependencies.contains(dep_name) {
-                            ws_dependencies.insert(dep_name.to_string());
+                            ws_deps.insert(dep_name.to_string());
                         }
                     }
                 }
             }
-            members.insert(name.clone(), ws_members);
-            dependencies.insert(name, ws_dependencies);
+            members_graph.insert(name.clone(), members);
+            ws_deps_graph.insert(name, ws_deps);
         }
     }
 
-    (members, dependencies)
+    (members_graph, ws_deps_graph)
 }
 
 /// Compute all transitive dependencies of the given target member.
@@ -254,12 +263,7 @@ fn compute_transitive_deps(
 }
 /// Filters the root manifest workspace members to keep ony the target member
 fn filter_root_members(recipe: &mut Recipe, target: &str) -> Result<()> {
-    let root = recipe
-        .skeleton
-        .manifests
-        .iter_mut()
-        .find(|m| m.relative_path.to_str() == Some("Cargo.toml"))
-        .context("no root Cargo.toml found")?;
+    let root = get_root_manifest_mut(recipe)?;
 
     let doc: Document<String> = root
         .contents
